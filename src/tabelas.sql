@@ -18,7 +18,11 @@ CREATE TABLE
         descricao TEXT NOT NULL,
         valor INTEGER NOT NULL,
         data TIMESTAMP NOT NULL,
-        categoria_id REFERENCES categorias(id),
-        usuario_id REFERENCES usuarios(id),
+        categoria_id INTEGER REFERENCES categorias(id),
+        usuario_id INTEGER REFERENCES usuarios(id),
         tipo TEXT NOT NULL
     );
+
+INSERT INTO
+    categorias (descricao)
+VALUES ('Alimentação'), ('Assinatura e Serviços'), ('Casa'), ('Mercado'), ('Cuidados Pessoais'), ('Educação'), ('Família'), ('Lazer'), ('Pets'), ('Presentes'), ('Roupas'), ('Saúde'), ('Transporte'), ('Salário'), ('Vendas'), ('Outras receitas'), ('Outras despesas');
