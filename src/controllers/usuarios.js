@@ -38,9 +38,7 @@ const cadastrarUsuario = async (req, res) => {
 
 const login = async (req, res) => {
     try {
-        const { email, senha } = req.body;
-
-        const usuario = await validarLogin(email, senha);
+        const usuario = req.usuario;
 
         if (!usuario) {
             return res.status(400).json({ mensagem: "Usuário e/ou senha inválido(s)." });
