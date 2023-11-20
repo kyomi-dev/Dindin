@@ -1,7 +1,8 @@
 const bcrypt = require("bcrypt");
 const pool = require("../conexao");
 const jwt = require("jsonwebtoken");
-const crypto = require("crypto")
+const { criarToken } = require("../criarToken");
+const { validarLogin } = require("../validarLogin");
 
 
 const cadastrarUsuario = async (req, res) => {
@@ -33,44 +34,26 @@ const cadastrarUsuario = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 }
+
+
 const login = async (req, res) => {
     try {
         const { email, senha } = req.body;
 
-        const validarLogin = async () => {
-            if (!email || !senha) {
-                return res.status(400).json({ mensagem: "Preencha todos os campos." });
-            }
-
-            const emailEncontrado = await pool.query("SELECT * FROM usuarios WHERE email = $1", [email]);
-            if (emailEncontrado.rows.length === 0) {
-                return res.status(400).json({ mensagem: "Usuário e/ou senha inválido(s)." });
-            }
-
-            const senhaValida = await bcrypt.compare(senha, emailEncontrado.rows[0].senha);
-            if (!senhaValida) {
-                return res.status(400).json({ mensagem: "Insira a senha correta." });
-            }
-
-            return emailEncontrado.rows[0];
-        }
-
-        const usuario = await validarLogin();
+        const usuario = await validarLogin(email, senha);
 
         if (!usuario) {
             return res.status(400).json({ mensagem: "Usuário e/ou senha inválido(s)." });
         }
 
         const id = usuario.id;
-        const stringAleatoria = crypto.randomBytes(16).toString('hex');
-        const hashJWT = await bcrypt.hash(stringAleatoria, 10);
-        const token = jwt.sign({ id: id }, hashJWT, { expiresIn: "1h" });
+        const token = await criarToken(id);
         const { senha: _, ...usuarioLogado } = usuario;
 
         return res.status(200).json({ usuario: usuarioLogado, token });
 
     } catch (error) {
-        return res.status(400).json({ mensagem: error });
+        return res.status(400).json({ mensagem: error.message });
     }
 }
 
