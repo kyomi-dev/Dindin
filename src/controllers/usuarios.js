@@ -77,7 +77,7 @@ const getListarCategorias = async (req, res) => {
         const query = await pool.query("SELECT * FROM categorias ");
 
         if (query.rows.length === 0) {
-            return res.status(401).json({ mensagem: "Nenhuma categoria encontrada." });
+            return res.status(401).json({ mensagem: "Categoria não encontrada." });
         }
 
         return res.status(200).json({ mensagem: query.rows });
@@ -109,7 +109,7 @@ const detalharTransacao = async (req, res) => {
         const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [id]);
 
         if (query.rows.length === 0) {
-            return res.status(401).json({ mensagem: "Nenhuma transação encontrada." });
+            return res.status(401).json({ mensagem: "Transação não encontrada." });
         }
 
         return res.status(200).json({ mensagem: query.rows });
