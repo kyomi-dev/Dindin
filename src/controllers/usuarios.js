@@ -55,5 +55,22 @@ const login = async (req, res) => {
     }
 }
 
+const getDadosUsuario = async (req, res) => {
+    try {
+        const id = req.usuario.id;
+        const query = await pool.query("SELECT * FROM usuarios WHERE id = $1", [id]);
 
-module.exports = { cadastrarUsuario, login };
+        if (query.rows.length === 0) {
+            return res.status(401).json({ mensagem: "Usuário não encontrado." });
+        }
+
+        const { senha: _, ...usuarioLogado } = query.rows[0];
+
+        return res.status(200).json({ mensagem: usuarioLogado });
+    } catch (error) {
+        return res.status(500).json({ mensagem: "Erro ao buscar dados do usuário." });
+    }
+}
+
+
+module.exports = { cadastrarUsuario, login, getDadosUsuario };
