@@ -80,9 +80,7 @@ const getListarCategorias = async (req, res) => {
             return res.status(401).json({ mensagem: "Nenhuma categoria encontrada." });
         }
 
-        const { senha: _, ...usuarioLogado } = query.rows;
-
-        return res.status(200).json({ mensagem: usuarioLogado });
+        return res.status(200).json({ mensagem: query.rows });
 
     } catch (error) {
         return res.status(500).json({ mensagem: "Erro ao buscar categorias." });
