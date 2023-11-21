@@ -72,5 +72,21 @@ const getDadosUsuario = async (req, res) => {
     }
 }
 
+const getListarCategorias = async (req, res) => {
+    try {
+        const query = await pool.query("SELECT * FROM categorias ");
 
-module.exports = { cadastrarUsuario, login, getDadosUsuario };
+        if (query.rows.length === 0) {
+            return res.status(401).json({ mensagem: "Nenhuma categoria encontrada." });
+        }
+
+        const { senha: _, ...usuarioLogado } = query.rows;
+
+        return res.status(200).json({ mensagem: usuarioLogado });
+
+    } catch (error) {
+        return res.status(500).json({ mensagem: "Erro ao buscar categorias." });
+    }
+}
+
+module.exports = { cadastrarUsuario, login, getDadosUsuario, getListarCategorias };
