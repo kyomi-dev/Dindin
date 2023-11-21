@@ -103,6 +103,21 @@ const listarTransacoes = async (req, res) => {
     }
 }
 
+const detalharTransacao = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [id]);
 
+        if (query.rows.length === 0) {
+            return res.status(401).json({ mensagem: "Nenhuma transação encontrada." });
+        }
 
-module.exports = { cadastrarUsuario, login, getDadosUsuario, getListarCategorias, listarTransacoes, };
+        return res.status(200).json({ mensagem: query.rows });
+
+    } catch (error) {
+        return res.status(500).json({ mensagem: "Erro ao buscar transação." });
+    }
+    
+}
+
+module.exports = { cadastrarUsuario, login, getDadosUsuario, getListarCategorias, listarTransacoes, detalharTransacao };
