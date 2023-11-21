@@ -2,23 +2,30 @@ const bcrypt = require("bcrypt");
 const pool = require("./conexao");
 
 
-const validarLogin = async (email, senha) => {
-    if (!email || !senha) {
-        throw new Error("Preencha todos os campos.");
-    }
+const validarLogin = async (req, res, next) => {
+    const { email, senha } = req.body;
 
-    const usuarioEncontrado = await pool.query("SELECT * FROM usuarios WHERE email = $1", [email]);
-    if (usuarioEncontrado.rows.length === 0) {
-        throw new Error("Usuário e/ou senha inválido(s).");
-    }
+    try {
+        if (!email || !senha) {
+            return res.status(400).json({ mensagem: "Preencha todos os campos." });
+        }
 
-    const senhaValida = await bcrypt.compare(senha, usuarioEncontrado.rows[0].senha);
-    if (!senhaValida) {
-        throw new Error("Insira a senha correta.");
-    }
+        const usuarioEncontrado = await pool.query("SELECT * FROM usuarios WHERE email = $1", [email]);
+        if (usuarioEncontrado.rows.length === 0) {
+            return res.status(400).json({ mensagem: "Usuário e/ou senha inválido(s)." });
+        }
 
-    return usuarioEncontrado.rows[0];
-}
+        const senhaValida = await bcrypt.compare(senha, usuarioEncontrado.rows[0].senha);
+        if (!senhaValida) {
+            return res.status(400).json({ mensagem: "Insira a senha correta." });
+        }
+
+        req.usuario = usuarioEncontrado.rows[0];
+        next();
+    } catch (error) {
+        return res.status(500).json({ mensagem: "Erro ao validar o login." });
+    }
+};
 
 
 module.exports = { validarLogin };
