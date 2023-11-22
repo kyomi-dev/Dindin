@@ -184,7 +184,44 @@ const criarTransacao = async (req, res) => {
     }
 };
 
+const atualizarTransacao = async (req, res) => {
+    try {
+        const usuarioId = req.usuario.id;
+        const transacaoId = req.params.id;
 
+        const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [transacaoId]);
+
+        if (query.rows.length === 0) {
+            return res.status(401).json({ mensagem: "Transação não encontrada." });
+        }
+        
+        const usuarioTransacaoId = query.rows[0].usuario_id;
+
+        if (usuarioId !== usuarioTransacaoId) {
+            return res.status(401).json({ mensagem: "Usuário não autorizado a alterar esta transação." });
+        }
+
+        const { descricao, valor, data, categoria_id, tipo } = req.body;
+
+        if (!descricao || !valor || !data || !categoria_id || !tipo) {
+            return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser informados." });
+        }
+
+        const validaCategoria = await pool.query("SELECT id, descricao FROM categorias WHERE id = $1", [categoria_id]);
+
+        if (validaCategoria.rows.length === 0) {
+            return res.status(404).json({ mensagem: "A categoria não consta no banco de dados." });
+        }
+
+        const resultado = await pool.query(
+            "UPDATE transacoes SET descricao = $1, valor = $2, data = $3, categoria_id = $4, tipo = $5 WHERE id = $6",
+            [descricao, valor, data, categoria_id, tipo, transacaoId]
+        );
+
+    } catch (error) {
+        return res.status(500).json({ mensagem : "Erro ao atualizar transação." });
+    }
+}
 
 
 module.exports = {
@@ -195,5 +232,6 @@ module.exports = {
     criarTransacao,
     getListarCategorias,
     listarTransacoes,
-    detalharTransacao
+    detalharTransacao,
+    atualizarTransacao	
 };
