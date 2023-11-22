@@ -117,7 +117,33 @@ const detalharTransacao = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ mensagem: "Erro ao buscar transação." });
     }
-    
+
 }
 
-module.exports = { cadastrarUsuario, login, getDadosUsuario, getListarCategorias, listarTransacoes, detalharTransacao };
+const editarUsuario = async (req, res) => {
+    const { nome, email, senha } = req.body;
+
+    if (!nome || !email || !senha) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    };
+    const usuarioEncontrado = await pool.query("SELECT * FROM usuarios WHERE email = $1 ", [email]);
+
+    if (usuarioEncontrado.rows.length > 0) {
+        return res.status(401).json({ mensagem: "O e-mail informado já existe no banco de dados." })
+    }
+    const idToken = req.usuario.id;
+    const hashSenha = await bcrypt.hash(senha, 10);
+    await pool.query("UPDATE usuarios SET nome = $1, email = $2, senha = $3 WHERE id = $4", [nome, email, hashSenha, idToken]);
+
+    return res.status(204).end();
+}
+
+module.exports = {
+    cadastrarUsuario,
+    login,
+    getDadosUsuario,
+    editarUsuario,
+    getListarCategorias,
+    listarTransacoes,
+    detalharTransacao
+};
