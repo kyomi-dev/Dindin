@@ -153,11 +153,8 @@ const extratoTransacoes = async (req, res) => {
     return res
       .status(200)
       .json({
-        mensagem: {
-          entradas: resultadoFinal.entradas,
-          saidas: resultadoFinal.saidas,
-          saldo,
-        },
+        entradas: resultadoFinal.entradas,
+        saidas: resultadoFinal.saidas
       });
   } catch (error) {
     return res.status(500).json({ mensagem: "Erro ao buscar transações." });
