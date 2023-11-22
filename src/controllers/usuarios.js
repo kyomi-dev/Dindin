@@ -105,11 +105,19 @@ const listarTransacoes = async (req, res) => {
 
 const detalharTransacao = async (req, res) => {
     try {
-        const id = req.params.id;
-        const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [id]);
+        const usuarioId = req.usuario.id;
+        const transacaoId = req.params.id;
+
+        const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [transacaoId]);
 
         if (query.rows.length === 0) {
             return res.status(401).json({ mensagem: "Transação não encontrada." });
+        }
+        
+        const usuarioTransacaoId = query.rows[0].usuario_id;
+
+        if (usuarioId !== usuarioTransacaoId) {
+            return res.status(401).json({ mensagem: "Usuário não autorizado a visualizar esta transação." });
         }
 
         return res.status(200).json({ mensagem: query.rows });
@@ -117,7 +125,6 @@ const detalharTransacao = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ mensagem: "Erro ao buscar transação." });
     }
-
 }
 
 const editarUsuario = async (req, res) => {
