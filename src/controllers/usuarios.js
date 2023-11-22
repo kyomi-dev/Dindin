@@ -145,11 +145,54 @@ const editarUsuario = async (req, res) => {
     return res.status(204).end();
 }
 
+const criarTransacao = async (req, res) => {
+    const usuarioID = req.usuario.id;
+    const { descricao, valor, data, categoria_id, tipo } = req.body;
+
+    const validaCategoria = await pool.query("SELECT id, descricao FROM categorias WHERE id = $1", [categoria_id]);
+    if (validaCategoria.rows.length === 0) {
+        return res.status(404).json({ mensagem: "A categoria não consta no banco de dados." });
+    }
+
+    if (!descricao || !valor || !data || !categoria_id || !tipo) {
+        return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser informados." });
+    }
+
+    try {
+        if (tipo === "entrada" || tipo === "saida") {
+            const resultado = await pool.query(
+                "INSERT INTO transacoes (descricao, valor, data, categoria_id, usuario_id, tipo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+                [descricao, valor, data, categoria_id, usuarioID, tipo]
+            );
+
+            const novaTransacao = resultado.rows[0];
+
+            return res.status(201).json({
+                id: novaTransacao.id,
+                tipo: novaTransacao.tipo,
+                descricao: novaTransacao.descricao,
+                valor: novaTransacao.valor,
+                data: novaTransacao.data,
+                usuario_id: novaTransacao.usuario_id,
+                categoria_id: novaTransacao.categoria_id,
+                categoria_nome: validaCategoria.rows[0].descricao
+            });
+        }
+
+    } catch (error) {
+        return res.status(500).json(error.message);
+    }
+};
+
+
+
+
 module.exports = {
     cadastrarUsuario,
     login,
     getDadosUsuario,
     editarUsuario,
+    criarTransacao,
     getListarCategorias,
     listarTransacoes,
     detalharTransacao
