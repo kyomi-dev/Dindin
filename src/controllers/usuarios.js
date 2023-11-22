@@ -218,10 +218,39 @@ const atualizarTransacao = async (req, res) => {
             [descricao, valor, data, categoria_id, tipo, transacaoId]
         );
 
+        return res.status(204).end();
+
     } catch (error) {
         return res.status(500).json({ mensagem : "Erro ao atualizar transação." });
     }
 }
+
+const excluirTransacao = async (req, res) => {
+    try {
+        const usuarioId = req.usuario.id;
+        const transacaoId = req.params.id;
+
+        const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [transacaoId]);
+
+        if (query.rows.length === 0) {
+            return res.status(404).json({ mensagem: "Transação não encontrada." });
+        }
+        
+        const usuarioTransacaoId = query.rows[0].usuario_id;
+
+        if (usuarioId !== usuarioTransacaoId) {
+            return res.status(401).json({ mensagem: "Usuário não autorizado a excluir esta transação." });
+        }
+
+        const resultado = await pool.query("DELETE FROM transacoes WHERE id = $1 RETURNING *", [transacaoId]);
+
+        return res.status(204).end();
+
+    } catch (error) {
+        return res.status(500).json({ mensagem: "Erro ao excluir transação." });
+    }
+}
+
 
 
 module.exports = {
@@ -233,5 +262,6 @@ module.exports = {
     getListarCategorias,
     listarTransacoes,
     detalharTransacao,
-    atualizarTransacao	
+    atualizarTransacao,
+    excluirTransacao
 };

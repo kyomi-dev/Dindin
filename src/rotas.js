@@ -8,7 +8,8 @@ const {
   detalharTransacao, 
   editarUsuario, 
   criarTransacao,
-  atualizarTransacao } = require("./controllers/usuarios");
+  atualizarTransacao,
+  excluirTransacao } = require("./controllers/usuarios");
 
 const { validarLogin } = require("./validarLogin");
 const validarToken = require("./validarToken");
@@ -24,6 +25,7 @@ rotas.get("/transacao", validarToken, listarTransacoes)
 rotas.get("/transacao/:id", validarToken, detalharTransacao)
 rotas.post("/transacao", validarToken, criarTransacao)
 rotas.put("/transacao/:id", validarToken, atualizarTransacao)
+rotas.delete("/transacao/:id", validarToken, excluirTransacao)
 
 
 module.exports = rotas;
