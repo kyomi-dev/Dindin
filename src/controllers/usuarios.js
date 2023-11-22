@@ -84,113 +84,6 @@ const getDadosUsuario = async (req, res) => {
   }
 };
 
-const getListarCategorias = async (req, res) => {
-  try {
-    const query = await pool.query("SELECT * FROM categorias ");
-
-    if (query.rows.length === 0) {
-      return res.status(401).json({ mensagem: "Categoria não encontrada." });
-    }
-
-    return res.status(200).json({ mensagem: query.rows });
-  } catch (error) {
-    return res.status(500).json({ mensagem: "Erro ao buscar categorias." });
-  }
-};
-
-const listarTransacoes = async (req, res) => {
-  try {
-    const id = req.usuario.id;
-    const query = await pool.query(
-      "SELECT * FROM transacoes WHERE usuario_id = $1",
-      [id]
-    );
-
-    if (query.rows.length === 0) {
-      return res
-        .status(401)
-        .json({ mensagem: "Nenhuma transação encontrada." });
-    }
-
-    return res.status(200).json({ mensagem: query.rows });
-  } catch (error) {
-    return res.status(500).json({ mensagem: "Erro ao buscar transações." });
-  }
-};
-
-const extratoTransacoes = async (req, res) => {
-  try {
-    const id = req.usuario.id;
-
-    const query = await pool.query(
-      "SELECT tipo, SUM(valor) AS total FROM transacoes WHERE usuario_id = $1 GROUP BY tipo",
-      [id]
-    );
-
-    if (query.rows.length === 0) {
-      return res
-        .status(200)
-        .json({ mensagem: "Nenhuma transação encontrada." });
-    }
-
-    const resultados = query.rows;
-
-    const resultadoFinal = {
-      entradas: 0,
-      saidas: 0,
-    };
-
-    resultados.forEach((resultado) => {
-      if (resultado.tipo === "entrada") {
-        resultadoFinal.entradas = parseFloat(resultado.total);
-      } else if (resultado.tipo === "saida") {
-        resultadoFinal.saidas = parseFloat(resultado.total);
-      }
-    });
-
-    const saldo = resultadoFinal.entradas - resultadoFinal.saidas;
-
-    return res
-      .status(200)
-      .json({
-        mensagem: {
-          entradas: resultadoFinal.entradas,
-          saidas: resultadoFinal.saidas,
-          saldo,
-        },
-      });
-  } catch (error) {
-    return res.status(500).json({ mensagem: "Erro ao buscar transações." });
-  }
-};
-
-const detalharTransacao = async (req, res) => {
-  try {
-    const usuarioId = req.usuario.id;
-    const transacaoId = req.params.id;
-
-    const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [
-      transacaoId,
-    ]);
-
-    if (query.rows.length === 0) {
-      return res.status(401).json({ mensagem: "Transação não encontrada." });
-    }
-
-    const usuarioTransacaoId = query.rows[0].usuario_id;
-
-    if (usuarioId !== usuarioTransacaoId) {
-      return res.status(401).json({
-        mensagem: "Usuário não autorizado a visualizar esta transação.",
-      });
-    }
-
-    return res.status(200).json({ mensagem: query.rows });
-  } catch (error) {
-    return res.status(500).json({ mensagem: "Erro ao buscar transação." });
-  }
-};
-
 const editarUsuario = async (req, res) => {
   const { nome, email, senha } = req.body;
 
@@ -217,28 +110,45 @@ const editarUsuario = async (req, res) => {
   return res.status(204).end();
 };
 
+const getListarCategorias = async (req, res) => {
+  try {
+    const query = await pool.query("SELECT * FROM categorias ");
+
+    if (query.rows.length === 0) {
+      return res.status(401).json({ mensagem: "Categoria não encontrada." });
+    }
+
+    return res.status(200).json({ mensagem: query.rows });
+  } catch (error) {
+    return res.status(500).json({ mensagem: "Erro ao buscar categorias." });
+  }
+};
+
 const criarTransacao = async (req, res) => {
   const usuarioID = req.usuario.id;
   const { descricao, valor, data, categoria_id, tipo } = req.body;
 
-  const validaCategoria = await pool.query(
-    "SELECT id, descricao FROM categorias WHERE id = $1",
-    [categoria_id]
-  );
-  if (validaCategoria.rows.length === 0) {
-    return res
-      .status(404)
-      .json({ mensagem: "A categoria não consta no banco de dados." });
-  }
-
-  if (!descricao || !valor || !data || !categoria_id || !tipo) {
-    return res
-      .status(400)
-      .json({ mensagem: "Todos os campos obrigatórios devem ser informados." });
-  }
-
   try {
-    if (tipo === "entradas" || tipo === "saidas") {
+    const validaCategoria = await pool.query(
+      "SELECT id, descricao FROM categorias WHERE id = $1",
+      [categoria_id]
+    );
+
+    if (validaCategoria.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ mensagem: "A categoria não consta no banco de dados." });
+    }
+
+    if (!descricao || !valor || !data || !categoria_id || !tipo) {
+      return res
+        .status(400)
+        .json({
+          mensagem: "Todos os campos obrigatórios devem ser informados.",
+        });
+    }
+
+    if (tipo === "entrada" || tipo === "saida") {
       const resultado = await pool.query(
         "INSERT INTO transacoes (descricao, valor, data, categoria_id, usuario_id, tipo) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
         [descricao, valor, data, categoria_id, usuarioID, tipo]
@@ -256,9 +166,51 @@ const criarTransacao = async (req, res) => {
         categoria_id: novaTransacao.categoria_id,
         categoria_nome: validaCategoria.rows[0].descricao,
       });
+    } else {
+      return res.status(400).json({ mensagem: "Tipo de transação inválido." });
     }
   } catch (error) {
-    return res.status(500).json(error.message);
+    return res.status(500).json({ mensagem: "Erro ao criar transação." });
+  }
+};
+
+const listarTransacoes = async (req, res) => {
+  try {
+    const id = req.usuario.id;
+    let categoriasFiltro = req.query.filtro;
+
+    if (!categoriasFiltro || (Array.isArray(categoriasFiltro) && categoriasFiltro.length === 0)) {
+      const query = await pool.query(
+        "SELECT * FROM transacoes WHERE usuario_id = $1",
+        [id]
+      );
+
+      if (query.rows.length === 0) {
+        return res.status(401).json({ mensagem: "Nenhuma transação encontrada." });
+      }
+
+      return res.status(200).json({ mensagem: query.rows });
+    }
+
+    categoriasFiltro = Array.isArray(categoriasFiltro) ? categoriasFiltro : [categoriasFiltro];
+
+    const placeholders = categoriasFiltro
+      .map((_, index) => `$${index + 2}`)
+      .join(", ");
+    
+    const query = await pool.query(
+      `SELECT * FROM transacoes WHERE usuario_id = $1 AND categoria_id IN (SELECT id FROM categorias WHERE descricao IN (${placeholders}))`,
+      [id, ...categoriasFiltro]
+    );
+
+    if (query.rows.length === 0) {
+      return res.status(401).json({ mensagem: "Nenhuma transação encontrada." });
+    }
+
+    return res.status(200).json({ mensagem: query.rows });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ mensagem: "Erro ao buscar transações." });
   }
 };
 
@@ -310,6 +262,77 @@ const atualizarTransacao = async (req, res) => {
     return res.status(204).end();
   } catch (error) {
     return res.status(500).json({ mensagem: "Erro ao atualizar transação." });
+  }
+};
+
+const detalharTransacao = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const transacaoId = req.params.id;
+
+    const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [
+      transacaoId,
+    ]);
+
+    if (query.rows.length === 0) {
+      return res.status(401).json({ mensagem: "Transação não encontrada." });
+    }
+
+    const usuarioTransacaoId = query.rows[0].usuario_id;
+
+    if (usuarioId !== usuarioTransacaoId) {
+      return res.status(401).json({
+        mensagem: "Usuário não autorizado a visualizar esta transação.",
+      });
+    }
+
+    return res.status(200).json({ mensagem: query.rows });
+  } catch (error) {
+    return res.status(500).json({ mensagem: "Erro ao buscar transação." });
+  }
+};
+
+const extratoTransacoes = async (req, res) => {
+  try {
+    const id = req.usuario.id;
+
+    const query = await pool.query(
+      "SELECT tipo, SUM(valor) AS total FROM transacoes WHERE usuario_id = $1 GROUP BY tipo",
+      [id]
+    );
+
+    if (query.rows.length === 0) {
+      return res
+        .status(200)
+        .json({ mensagem: "Nenhuma transação encontrada." });
+    }
+
+    const resultados = query.rows;
+
+    const resultadoFinal = {
+      entradas: 0,
+      saidas: 0,
+    };
+
+    resultados.forEach((resultado) => {
+      if (resultado.tipo === "entrada") {
+        resultadoFinal.entradas = parseFloat(resultado.total);
+      } else if (resultado.tipo === "saida") {
+        resultadoFinal.saidas = parseFloat(resultado.total);
+      }
+    });
+
+    const saldo = resultadoFinal.entradas - resultadoFinal.saidas;
+
+    return res.status(200).json({
+      mensagem: {
+        entradas: resultadoFinal.entradas,
+        saidas: resultadoFinal.saidas,
+        saldo,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ mensagem: "Erro ao buscar transações." });
   }
 };
 
