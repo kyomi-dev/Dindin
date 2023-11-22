@@ -202,7 +202,7 @@ const editarUsuario = async (req, res) => {
   if (usuarioEncontrado.rows.length > 0) {
     return res
       .status(401)
-      .json({ mensagem: "O e-mail informado já existe no banco de dados." });
+      .json({ mensagem: "O e-mail informado já está sendo utilizado por outro usuário." });
   }
   const idToken = req.usuario.id;
   const hashSenha = await bcrypt.hash(senha, 10);
