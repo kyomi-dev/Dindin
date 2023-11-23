@@ -1,16 +1,16 @@
 const express = require("express");
-const { 
+const {
   cadastrarUsuario,
   login,
-  getDadosUsuario, 
-  getListarCategorias, 
-  listarTransacoes, 
-  detalharTransacao, 
-  editarUsuario, 
+  getDadosUsuario,
+  getListarCategorias,
+  listarTransacoes,
+  detalharTransacao,
+  editarUsuario,
   criarTransacao,
   atualizarTransacao,
   excluirTransacao,
-  extratoTransacoes} = require("./controllers/usuarios");
+  extratoTransacoes } = require("./controllers/usuarios");
 
 const { validarLogin } = require("./validarLogin");
 const validarToken = require("./validarToken");
