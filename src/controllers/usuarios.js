@@ -211,54 +211,44 @@ const listarTransacoes = async (req, res) => {
 
     return res.status(200).json({ mensagem: query.rows });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ mensagem: "Erro ao buscar transações." });
   }
 };
 
 const atualizarTransacao = async (req, res) => {
+  const { descricao, valor, data, categoria_id, tipo } = req.body;
+  const { id } = req.params;
+
+  if (!descricao || !valor || !data || !categoria_id || !tipo) {
+    return res.status(400).json({
+      mensagem: "Todos os campos obrigatórios devem ser informados.",
+    });
+  }
+
   try {
-    const usuarioId = req.usuario.id;
-    const transacaoId = req.params.id;
+    const transacao = await pool.query("SELECT * FROM transacoes WHERE id = $1", [id]);
 
-    const query = await pool.query("SELECT * FROM transacoes WHERE id = $1", [
-      transacaoId,
-    ]);
-
-    if (query.rows.length === 0) {
-      return res.status(401).json({ mensagem: "Transação não encontrada." });
+    if (transacao.rows.length === 0) {
+      return res.status(404).json({ mensagem: "A transação não existe." });
     }
 
-    const usuarioTransacaoId = query.rows[0].usuario_id;
-
-    if (usuarioId !== usuarioTransacaoId) {
-      return res
-        .status(401)
-        .json({ mensagem: "Usuário não autorizado a alterar esta transação." });
+    if (Number(transacao.rows[0].usuario_id) !== Number(req.usuario.id)) {
+      return res.status(401).json({ mensagem: "Usuário não autorizado." });
     }
 
-    const { descricao, valor, data, categoria_id, tipo } = req.body;
+    const categoria = await pool.query("SELECT * FROM categorias WHERE id = $1", [categoria_id]);
 
-    if (!descricao || !valor || !data || !categoria_id || !tipo) {
-      return res.status(400).json({
-        mensagem: "Todos os campos obrigatórios devem ser informados.",
-      });
+    if (categoria.rows.length === 0) {
+      return res.status(404).json({ mensagem: "A categoria não existe." });
     }
 
-    const validaCategoria = await pool.query(
-      "SELECT id, descricao FROM categorias WHERE id = $1",
-      [categoria_id]
-    );
-
-    if (validaCategoria.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ mensagem: "A categoria não consta no banco de dados." });
+    if (tipo !== "entrada" && tipo !== "saida") {
+      return res.status(401).json({ mensagem: "O tipo deve ser 'entrada' ou 'saida'." });
     }
 
     const resultado = await pool.query(
       "UPDATE transacoes SET descricao = $1, valor = $2, data = $3, categoria_id = $4, tipo = $5 WHERE id = $6",
-      [descricao, valor, data, categoria_id, tipo, transacaoId]
+      [descricao, valor, data, categoria_id, tipo, id]
     );
 
     return res.status(204).end();
@@ -266,6 +256,7 @@ const atualizarTransacao = async (req, res) => {
     return res.status(500).json({ mensagem: "Erro ao atualizar transação." });
   }
 };
+
 
 const detalharTransacao = async (req, res) => {
   try {
