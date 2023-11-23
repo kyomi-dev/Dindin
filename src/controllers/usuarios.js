@@ -98,7 +98,7 @@ const editarUsuario = async (req, res) => {
   if (usuarioEncontrado.rows.length > 0) {
     return res
       .status(401)
-      .json({ mensagem: "O e-mail informado já existe no banco de dados." });
+      .json({ mensagem: "O e-mail informado já está sendo utilizado por outro usuário." });
   }
   const idToken = req.usuario.id;
   const hashSenha = await bcrypt.hash(senha, 10);
@@ -129,6 +129,14 @@ const criarTransacao = async (req, res) => {
   const { descricao, valor, data, categoria_id, tipo } = req.body;
 
   try {
+    if (!descricao || !valor || !data || !categoria_id || !tipo) {
+      return res
+        .status(400)
+        .json({
+          mensagem: "Todos os campos obrigatórios devem ser informados.",
+        });
+    }
+
     const validaCategoria = await pool.query(
       "SELECT id, descricao FROM categorias WHERE id = $1",
       [categoria_id]
@@ -140,13 +148,7 @@ const criarTransacao = async (req, res) => {
         .json({ mensagem: "A categoria não consta no banco de dados." });
     }
 
-    if (!descricao || !valor || !data || !categoria_id || !tipo) {
-      return res
-        .status(400)
-        .json({
-          mensagem: "Todos os campos obrigatórios devem ser informados.",
-        });
-    }
+
 
     if (tipo === "entrada" || tipo === "saida") {
       const resultado = await pool.query(
@@ -197,7 +199,7 @@ const listarTransacoes = async (req, res) => {
     const placeholders = categoriasFiltro
       .map((_, index) => `$${index + 2}`)
       .join(", ");
-    
+
     const query = await pool.query(
       `SELECT * FROM transacoes WHERE usuario_id = $1 AND categoria_id IN (SELECT id FROM categorias WHERE descricao IN (${placeholders}))`,
       [id, ...categoriasFiltro]
